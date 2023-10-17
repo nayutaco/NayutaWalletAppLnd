@@ -1509,6 +1509,12 @@ message Channel {
 
     // This is the confirmed / on-chain zero-conf SCID.
     uint64 zero_conf_confirmed_scid = 33;
+
+    // The channel ID for the channel named by remote node(for alias-scid).
+    uint64 remote_chan_id = 1000 [jstype = JS_STRING];
+
+    // This node's current sendable balance in this channel
+    int64 sendable_bandwidth = 1001;
 }
 
 message ListChannelsRequest {
@@ -3435,6 +3441,15 @@ message Invoice {
     Note: Output only, don't specify for creating an invoice.
     */
     map<string, AMPInvoiceState> amp_invoice_state = 28;
+
+    /*
+    NayutaWallet: Signals whether only create invoice or not(register database).
+    */
+    bool only_create = 1000;
+    /*
+    NayutaWallet: Signals whether create MPP not supported invoice or not.
+    */
+    bool is_nompp = 1001;
 }
 
 enum InvoiceHTLCState {

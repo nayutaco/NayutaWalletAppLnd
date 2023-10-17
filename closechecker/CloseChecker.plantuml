@@ -1,0 +1,8 @@
+@startuml CloseChecker
+
+participant NC2
+participant Android
+participant CloseChecker
+participant ElectrumServer
+
+@enduml

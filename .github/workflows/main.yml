@@ -3,10 +3,10 @@ name: CI
 on:
   push:
     branches:
-      - "master"
+      - "zzzmaster"
   pull_request:
     branches:
-      - "*"
+      - "zzz*"
 
 defaults:
   run:

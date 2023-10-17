@@ -79,6 +79,9 @@ type AddInvoiceConfig struct {
 	// should be advertised on freshly generated AMP invoices.
 	GenAmpInvoiceFeatures func() *lnwire.FeatureVector
 
+	// GenNoMppInvoiceFeatures returns a feature for Nayuta Wallet no MPP invoice.
+	GenNoMppInvoiceFeatures func() *lnwire.FeatureVector
+
 	// GetAlias allows the peer's alias SCID to be retrieved for private
 	// option_scid_alias channels.
 	GetAlias func(lnwire.ChannelID) (lnwire.ShortChannelID, error)
@@ -135,6 +138,16 @@ type AddInvoiceData struct {
 	// RouteHints are optional route hints that can each be individually
 	// used to assist in reaching the invoice's destination.
 	RouteHints [][]zpay32.HopHint
+
+	// NayutaWallet: OnlyCreate signals whether create only or not(register to database).
+	OnlyCreate bool
+
+	// NayutaWallet: NoMpp signals whether or not to create an MPP not supported invoice.
+	// (original LND support MPP always)
+	NoMpp bool
+
+	// Payment Address if use specified address.
+	PaymentAddr []byte
 }
 
 // paymentHashAndPreimage returns the payment hash and preimage for this invoice
@@ -414,7 +427,10 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 
 	// Set our desired invoice features and add them to our list of options.
 	var invoiceFeatures *lnwire.FeatureVector
-	if invoice.Amp {
+	if invoice.NoMpp {
+		log.Debug("[addinvoice]NoMpp")
+		invoiceFeatures = cfg.GenNoMppInvoiceFeatures()
+	} else if invoice.Amp {
 		invoiceFeatures = cfg.GenAmpInvoiceFeatures()
 	} else {
 		invoiceFeatures = cfg.GenInvoiceFeatures()
@@ -425,8 +441,12 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 	// sender understands payment addresses, this can be used to avoid
 	// intermediaries probing the receiver.
 	var paymentAddr [32]byte
-	if _, err := rand.Read(paymentAddr[:]); err != nil {
-		return nil, nil, err
+	if invoice.PaymentAddr != nil {
+		copy(paymentAddr[:], invoice.PaymentAddr)
+	} else {
+		if _, err := rand.Read(paymentAddr[:]); err != nil {
+			return nil, nil, err
+		}
 	}
 	options = append(options, zpay32.PaymentAddr(paymentAddr))
 
@@ -469,10 +489,12 @@ func AddInvoice(ctx context.Context, cfg *AddInvoiceConfig,
 		}),
 	)
 
-	// With all sanity checks passed, write the invoice to the database.
-	_, err = cfg.AddInvoice(newInvoice, paymentHash)
-	if err != nil {
-		return nil, nil, err
+	if !invoice.OnlyCreate {
+		// With all sanity checks passed, write the invoice to the database.
+		_, err = cfg.AddInvoice(newInvoice, paymentHash)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return &paymentHash, newInvoice, nil
@@ -512,10 +534,11 @@ func chanCanBeHopHint(channel *HopHintInfo, cfg *SelectHopHintsCfg) (
 	}
 
 	if !isRemoteNodePublic {
-		log.Debugf("Skipping channel %v due to "+
+		// Nayuta: This lnd connect only HUB-lnd, and HUB-lnd is always public node.
+		log.Debugf("IGNORE: Skipping channel %v due to "+
 			"counterparty %x being unadvertised",
 			channel.ShortChannelID, remotePub)
-		return nil, false
+		// return nil, false
 	}
 
 	// Fetch the policies for each end of the channel.

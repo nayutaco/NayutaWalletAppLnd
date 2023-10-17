@@ -59,22 +59,11 @@ func ErrCsvDelayTooLarge(remoteDelay, maxDelay uint16) ReservationError {
 	}
 }
 
-// ErrChanReserveTooSmall returns an error indicating that the channel reserve
-// the remote is requiring is too small to be accepted.
-func ErrChanReserveTooSmall(reserve, dustLimit btcutil.Amount) ReservationError {
+// ErrNonZeroChanReserve returns an error indicating that the channel reserve
+// the remote is requiring is not zero.
+func ErrNonZeroChanReserve(reserve btcutil.Amount) ReservationError {
 	return ReservationError{
-		fmt.Errorf("channel reserve of %v sat is too small, min is %v "+
-			"sat", int64(reserve), int64(dustLimit)),
-	}
-}
-
-// ErrChanReserveTooLarge returns an error indicating that the chan reserve the
-// remote is requiring, is too large to be accepted.
-func ErrChanReserveTooLarge(reserve,
-	maxReserve btcutil.Amount) ReservationError {
-	return ReservationError{
-		fmt.Errorf("channel reserve is too large: %v sat, max "+
-			"is %v sat", int64(reserve), int64(maxReserve)),
+		fmt.Errorf("non-zero channel reserve are disabled(%v sat)", int64(reserve)),
 	}
 }
 

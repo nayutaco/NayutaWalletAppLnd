@@ -1,0 +1,80 @@
+name: Build
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - 'build-*'
+    tags:
+      - 'nc-v*'
+
+env:
+  GO_VERSION: 1.18.3
+  NDK_VERSION: 22.1.7171670
+jobs:
+
+  ########################
+  # build mobile
+  ########################
+  lndmobile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Cache docker
+        uses: actions/cache@v3
+        with:
+          path: |
+            /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Cache golang
+        uses: actions/cache@v3
+        with:
+          path: /home/runner/work/go
+          key: lnd-${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ github.job }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            lnd-${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ github.job }}-${{ hashFiles('**/go.sum') }}
+            lnd-${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ github.job }}-
+            lnd-${{ runner.os }}-go-${{ env.GO_VERSION }}-
+            lnd-${{ runner.os }}-go-
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Setup Android NDK
+        run: |
+          sdkmanager "ndk;${{ env.NDK_VERSION }}"
+
+      - name: Setup go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: '${{ env.GO_VERSION }}'
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build
+        run: |
+          git config --global url."https://${{ secrets.AccessToken }}:x-oauth-basic@github.com/nayutaco/".insteadOf "https://github.com/nayutaco/"
+          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/${{ env.NDK_VERSION }}
+          echo ANDROID_NDK_HOME=$ANDROID_NDK_HOME
+          export GOPATH=~/go
+          export GOPRIVATE="github.com/nayutaco"
+          export PATH=$GOPATH/bin:$PATH
+          mkdir -p $GOPATH/src/github.com/lightningnetwork/lnd
+          mv ./* $GOPATH/src/github.com/lightningnetwork/lnd/
+          cd $GOPATH/src/github.com/lightningnetwork/lnd
+          ./mk-mobile.sh android
+      - name: upload AAR
+        uses: actions/upload-artifact@v3
+        with:
+          name: Lndmobile.aar
+          path: ~/go/src/github.com/lightningnetwork/lnd/mobile/build/android/Lndmobile.aar

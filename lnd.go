@@ -7,6 +7,7 @@ package lnd
 import (
 	"context"
 	"crypto/tls"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -30,6 +31,7 @@ import (
 	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lnwallet"
+	"github.com/lightningnetwork/lnd/lspclient"
 	"github.com/lightningnetwork/lnd/macaroons"
 	"github.com/lightningnetwork/lnd/monitoring"
 	"github.com/lightningnetwork/lnd/rpcperms"
@@ -134,6 +136,27 @@ var errStreamIsolationWithProxySkip = errors.New(
 	"while stream isolation is enabled, the TOR proxy may not be skipped",
 )
 
+// zeroAcceptor is a sub-acceptor for Zero-Conf channel
+type zeroAcceptor struct{}
+
+func (d *zeroAcceptor) Accept(req *chanacceptor.ChannelAcceptRequest) *chanacceptor.ChannelAcceptResponse {
+	failResult := &chanacceptor.ChannelAcceptResponse{
+		ZeroConf: false,
+	}
+	if req.Node == nil {
+		return failResult
+	}
+	reqNode := hex.EncodeToString(req.Node.SerializeCompressed())
+	hubNode := lspclient.GetHubLnNode()
+	ltndLog.Infof("ZERO ChannelAcceptor: %s(hub:%s)", reqNode, hubNode)
+	if len(hubNode) == 0 {
+		return failResult
+	}
+	return &chanacceptor.ChannelAcceptResponse{
+		ZeroConf: reqNode == hubNode,
+	}
+}
+
 // Main is the true entry point for lnd. It accepts a fully populated and
 // validated main configuration struct and an optional listener config struct.
 // This function starts all main system components then blocks until a signal
@@ -224,28 +247,62 @@ func Main(cfg *Config, lisCfg ListenerCfg, implCfg *ImplementationCfg,
 
 	defer cleanUp()
 
-	// If we have chosen to start with a dedicated listener for the
-	// rpc server, we set it directly.
-	grpcListeners := append([]*ListenerWithSignal{}, lisCfg.RPCListeners...)
-	if len(grpcListeners) == 0 {
-		// Otherwise we create listeners from the RPCListeners defined
-		// in the config.
-		for _, grpcEndpoint := range cfg.RPCListeners {
-			// Start a gRPC server listening for HTTP/2
-			// connections.
-			lis, err := lncfg.ListenOnAddress(grpcEndpoint)
-			if err != nil {
-				return mkErr("unable to listen on %s: %v",
-					grpcEndpoint, err)
-			}
-			defer lis.Close()
+	/**
+	 *	Nayuta Core original change
+	 *
+	 *	We made ListenerWithSignal do more desired behaviour.
+	 *
+	 *	When Listener is not provided, but Ready channel is provided,
+	 *	gRPC listener is created as CLI version of LND does, but Ready channel
+	 *	is also available.
+	 *
+	 *	|               | Listener is non-nil        | Listener is nil              |
+	 *	|---------------+----------------------------+------------------------------|
+	 *	| Ready non-nil | [0]passthrough             | [1]fallback lis, given ready |
+	 *	| Ready is nil  | [2]fallback lis, noop chan | [3]fallback lis, noop chan   |
+	 *
+	 *	cfg(in mobile/bindings.go) sets `Listener = nil`, so mobile version use [1].
+	 */
+	var grpcListeners []*ListenerWithSignal
+	if lisCfg.RPCListeners != nil && len(lisCfg.RPCListeners) == 1 && lisCfg.RPCListeners[0].Listener == nil && lisCfg.RPCListeners[0].Ready != nil {
+		// This channels are shared if multiple RPCListeners
+		// Start a gRPC server listening for HTTP/2
+		// connections.
+		lis, err := lncfg.ListenOnAddress(cfg.RPCListeners[0])
+		if err != nil {
+			ltndLog.Errorf("unable to listen on %s",
+				cfg.RPCListeners[0])
+			return err
+		}
+		defer lis.Close()
 
-			grpcListeners = append(
-				grpcListeners, &ListenerWithSignal{
-					Listener: lis,
-					Ready:    make(chan struct{}),
-				},
-			)
+		grpcListeners = append(
+			grpcListeners, &ListenerWithSignal{
+				Listener: lis,
+				Ready:    lisCfg.RPCListeners[0].Ready,
+			})
+	} else {
+		grpcListeners = append([]*ListenerWithSignal{}, lisCfg.RPCListeners...)
+		if len(grpcListeners) == 0 {
+			// Otherwise we create listeners from the RPCListeners defined
+			// in the config.
+			for _, grpcEndpoint := range cfg.RPCListeners {
+				// Start a gRPC server listening for HTTP/2
+				// connections.
+				lis, err := lncfg.ListenOnAddress(grpcEndpoint)
+				if err != nil {
+					return mkErr("unable to listen on %s: %v",
+						grpcEndpoint, err)
+				}
+				defer lis.Close()
+
+				grpcListeners = append(
+					grpcListeners, &ListenerWithSignal{
+						Listener: lis,
+						Ready:    make(chan struct{}),
+					},
+				)
+			}
 		}
 	}
 
@@ -502,6 +559,7 @@ func Main(cfg *Config, lisCfg ListenerCfg, implCfg *ImplementationCfg,
 	var multiAcceptor chanacceptor.MultiplexAcceptor
 	if cfg.ProtocolOptions.ZeroConf() {
 		multiAcceptor = chanacceptor.NewZeroConfAcceptor()
+		multiAcceptor.AddAcceptor(&zeroAcceptor{})
 	} else {
 		multiAcceptor = chanacceptor.NewChainedAcceptor()
 	}

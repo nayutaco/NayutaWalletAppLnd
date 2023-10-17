@@ -23,6 +23,9 @@ http:
     - selector: walletrpc.WalletKit.ImportPublicKey
       post: "/v2/wallet/key/import"
       body: "*"
+    - selector: walletrpc.WalletKit.ImportWitnessScript
+      post: "/v2/wallet/key/importwitscript"
+      body: "*"
     - selector: walletrpc.WalletKit.NextAddr
       post: "/v2/wallet/address/next"
       body: "*"

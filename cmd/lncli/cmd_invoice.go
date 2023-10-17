@@ -71,6 +71,10 @@ var addInvoiceCommand = cli.Command{
 			Usage: "creates an AMP invoice. If true, preimage " +
 				"should not be set.",
 		},
+		cli.BoolFlag{
+			Name:  "only_create",
+			Usage: "create invoice but not register.",
+		},
 	},
 	Action: actionDecorator(addInvoice),
 }
@@ -125,6 +129,7 @@ func addInvoice(ctx *cli.Context) error {
 		Expiry:          ctx.Int64("expiry"),
 		Private:         ctx.Bool("private"),
 		IsAmp:           ctx.Bool("amp"),
+		OnlyCreate:      ctx.Bool("only_create"),
 	}
 
 	resp, err := client.AddInvoice(ctxc, invoice)

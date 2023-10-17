@@ -1,3 +1,17 @@
+## Nayuta Core2Lnd
+
+### Build Android library(Lndmobile.aar)
+
+```bash
+./mk-mobile.sh android
+```
+
+### Build iOS library(Lndmobile.xcframework)
+
+```bash
+./mk-mobile.sh ios
+```
+
 ## Lightning Network Daemon
 
 [![Build Status](https://img.shields.io/travis/lightningnetwork/lnd.svg)](https://travis-ci.org/lightningnetwork/lnd)

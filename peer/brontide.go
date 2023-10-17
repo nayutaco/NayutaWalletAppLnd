@@ -1843,6 +1843,13 @@ func messageSummary(msg lnwire.Message) string {
 // nil. Doing this avoids printing out each of the field elements in the curve
 // parameters for secp256k1.
 func (p *Brontide) logWireMessage(msg lnwire.Message, read bool) {
+	switch msg.MsgType() {
+	case lnwire.MsgPing, lnwire.MsgPong,
+		lnwire.MsgChannelAnnouncement, lnwire.MsgNodeAnnouncement,
+		lnwire.MsgChannelUpdate:
+
+		return
+	}
 	summaryPrefix := "Received"
 	if !read {
 		summaryPrefix = "Sending"

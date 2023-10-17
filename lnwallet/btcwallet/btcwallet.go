@@ -799,6 +799,39 @@ func (b *BtcWallet) ImportTaprootScript(scope waddrmgr.KeyScope,
 	)
 }
 
+// for submarine swap script
+func (b *BtcWallet) ImportWitnessScript(script []byte, hash *chainhash.Hash, height int32) (string, error) {
+	var regAddr btcutil.Address
+	err := walletdb.Update(b.db, func(tx walletdb.ReadWriteTx) error {
+		addrmgrNs := tx.ReadWriteBucket(waddrmgrNamespaceKey)
+
+		bs := &waddrmgr.BlockStamp{
+			Hash:   *hash,
+			Height: height,
+		}
+
+		scope, err := b.wallet.Manager.FetchScopedKeyManager(
+			waddrmgr.KeyScopeBIP0084, //segwit
+		)
+		if err != nil {
+			return err
+		}
+
+		// witness version = 0
+		addr, err := scope.ImportWitnessScript(addrmgrNs, script, bs, 0, false)
+		if err != nil {
+			return err
+		}
+		regAddr = addr.Address()
+		err = b.chain.NotifyReceived([]btcutil.Address{regAddr})
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+	return regAddr.EncodeAddress(), err
+}
+
 // SendOutputs funds, signs, and broadcasts a Bitcoin transaction paying out to
 // the specified outputs. In the case the wallet has insufficient funds, or the
 // outputs are non-standard, a non-nil error will be returned.

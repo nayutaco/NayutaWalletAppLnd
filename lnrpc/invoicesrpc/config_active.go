@@ -61,6 +61,9 @@ type Config struct {
 	// should be advertised on freshly generated AMP invoices.
 	GenAmpInvoiceFeatures func() *lnwire.FeatureVector
 
+	// GenNoMppInvoiceFeatures returns a feature for Nayuta Wallet no MPP invoice.
+	GenNoMppInvoiceFeatures func() *lnwire.FeatureVector
+
 	// GetAlias returns the peer's alias SCID if it exists given the
 	// 32-byte ChannelID.
 	GetAlias func(lnwire.ChannelID) (lnwire.ShortChannelID, error)

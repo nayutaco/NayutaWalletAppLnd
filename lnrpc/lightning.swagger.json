@@ -3484,6 +3484,16 @@
           "type": "string",
           "format": "uint64",
           "description": "This is the confirmed / on-chain zero-conf SCID."
+        },
+        "remote_chan_id": {
+          "type": "string",
+          "format": "uint64",
+          "description": "The channel ID for the channel named by remote node(for alias-scid)."
+        },
+        "sendable_bandwidth": {
+          "type": "string",
+          "format": "int64",
+          "title": "This node's current sendable balance in this channel"
         }
       }
     },
@@ -5054,6 +5064,14 @@
           },
           "description": "Maps a 32-byte hex-encoded set ID to the sub-invoice AMP state for the\ngiven set ID. This field is always populated for AMP invoices, and can be\nused along side LookupInvoice to obtain the HTLC information related to a\ngiven sub-invoice.\nNote: Output only, don't specify for creating an invoice.",
           "title": "[EXPERIMENTAL]:"
+        },
+        "only_create": {
+          "type": "boolean",
+          "description": "NayutaWallet: Signals whether only create invoice or not(register database)."
+        },
+        "is_nompp": {
+          "type": "boolean",
+          "description": "NayutaWallet: Signals whether create MPP not supported invoice or not."
         }
       }
     },

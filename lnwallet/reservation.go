@@ -471,10 +471,9 @@ func (r *ChannelReservation) CommitConstraints(c *channeldb.ChannelConstraints,
 		return ErrCsvDelayTooLarge(c.CsvDelay, maxLocalCSVDelay)
 	}
 
-	// The channel reserve should always be greater or equal to the dust
-	// limit. The reservation request should be denied if otherwise.
-	if c.DustLimit > c.ChanReserve {
-		return ErrChanReserveTooSmall(c.ChanReserve, c.DustLimit)
+	// The channel reserve should equal zero.
+	if c.ChanReserve != 0 {
+		return ErrNonZeroChanReserve(c.ChanReserve)
 	}
 
 	// Validate against the maximum-sized witness script dust limit, and
@@ -482,13 +481,6 @@ func (r *ChannelReservation) CommitConstraints(c *channeldb.ChannelConstraints,
 	maxWitnessLimit := DustLimitForSize(input.UnknownWitnessSize)
 	if c.DustLimit < maxWitnessLimit || c.DustLimit > 3*maxWitnessLimit {
 		return ErrInvalidDustLimit(c.DustLimit)
-	}
-
-	// Fail if we consider the channel reserve to be too large.  We
-	// currently fail if it is greater than 20% of the channel capacity.
-	maxChanReserve := r.partialState.Capacity / 5
-	if c.ChanReserve > maxChanReserve {
-		return ErrChanReserveTooLarge(c.ChanReserve, maxChanReserve)
 	}
 
 	// Fail if the minimum HTLC value is too large. If this is too large,
@@ -522,12 +514,6 @@ func (r *ChannelReservation) CommitConstraints(c *channeldb.ChannelConstraints,
 		)
 	}
 
-	// Our dust limit should always be less than or equal to our proposed
-	// channel reserve.
-	if responder && r.ourContribution.DustLimit > c.ChanReserve {
-		r.ourContribution.DustLimit = c.ChanReserve
-	}
-
 	r.ourContribution.ChanReserve = c.ChanReserve
 	r.ourContribution.MaxPendingAmount = c.MaxPendingAmount
 	r.ourContribution.MinHTLC = c.MinHTLC
@@ -542,24 +528,8 @@ func (r *ChannelReservation) CommitConstraints(c *channeldb.ChannelConstraints,
 // by BOLT#02 even if it's not explicit. This returns true if the bounds are
 // valid. This function should be called with the lock held.
 func (r *ChannelReservation) validateReserveBounds() bool {
-	ourDustLimit := r.ourContribution.DustLimit
-	ourRequiredReserve := r.ourContribution.ChanReserve
-	theirDustLimit := r.theirContribution.DustLimit
-	theirRequiredReserve := r.theirContribution.ChanReserve
-
-	// We take the smaller of the two ChannelReserves and compare it
-	// against the larger of the two DustLimits.
-	minChanReserve := ourRequiredReserve
-	if minChanReserve > theirRequiredReserve {
-		minChanReserve = theirRequiredReserve
-	}
-
-	maxDustLimit := ourDustLimit
-	if maxDustLimit < theirDustLimit {
-		maxDustLimit = theirDustLimit
-	}
-
-	return minChanReserve >= maxDustLimit
+	// We accept only channelReserve=0 request.
+	return r.ourContribution.ChanReserve == 0
 }
 
 // OurContribution returns the wallet's fully populated contribution to the

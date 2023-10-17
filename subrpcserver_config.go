@@ -118,6 +118,7 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 	tcpResolver lncfg.TCPResolver,
 	genInvoiceFeatures func() *lnwire.FeatureVector,
 	genAmpInvoiceFeatures func() *lnwire.FeatureVector,
+	genNoMppInvoiceFeatures func() *lnwire.FeatureVector,
 	getNodeAnnouncement func() (lnwire.NodeAnnouncement, error),
 	updateNodeAnnouncement func(modifiers ...netann.NodeAnnModifier) error,
 	parseAddr func(addr string) (net.Addr, error),
@@ -257,6 +258,9 @@ func (s *subRPCServerConfigs) PopulateDependencies(cfg *Config,
 			)
 			subCfgValue.FieldByName("GenAmpInvoiceFeatures").Set(
 				reflect.ValueOf(genAmpInvoiceFeatures),
+			)
+			subCfgValue.FieldByName("GenNoMppInvoiceFeatures").Set(
+				reflect.ValueOf(genNoMppInvoiceFeatures),
 			)
 			subCfgValue.FieldByName("GetAlias").Set(
 				reflect.ValueOf(getAlias),

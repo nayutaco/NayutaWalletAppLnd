@@ -264,6 +264,39 @@
         ]
       }
     },
+    "/v2/wallet/key/importwitscript": {
+      "post": {
+        "summary": "for submarine swap script",
+        "operationId": "WalletKit_ImportWitnessScript",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/walletrpcImportWitnessScriptResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/walletrpcImportWitnessScriptRequest"
+            }
+          }
+        ],
+        "tags": [
+          "WalletKit"
+        ]
+      }
+    },
     "/v2/wallet/key/next": {
       "post": {
         "summary": "DeriveNextKey attempts to derive the *next* key within the key family\n(account in BIP43) specified. This method should return the next external\nchild within this branch.",
@@ -1270,6 +1303,31 @@
     },
     "walletrpcImportPublicKeyResponse": {
       "type": "object"
+    },
+    "walletrpcImportWitnessScriptRequest": {
+      "type": "object",
+      "properties": {
+        "script": {
+          "type": "string",
+          "format": "byte"
+        },
+        "block_hash_str": {
+          "type": "string"
+        },
+        "block_height": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "for submarine swap script"
+    },
+    "walletrpcImportWitnessScriptResponse": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        }
+      }
     },
     "walletrpcKeyReq": {
       "type": "object",

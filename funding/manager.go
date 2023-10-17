@@ -947,8 +947,8 @@ func (f *Manager) stateStep(channel *channeldb.OpenChannel,
 	updateChan chan<- *lnrpc.OpenStatusUpdate) error {
 
 	chanID := lnwire.NewChanIDFromOutPoint(&channel.FundingOutpoint)
-	log.Debugf("Channel(%v) with ShortChanID %v has opening state %v",
-		chanID, shortChanID, channelState)
+	// log.Debugf("Channel(%v) with ShortChanID %v has opening state %v",
+	// 	chanID, shortChanID, channelState)
 
 	switch channelState {
 	// The funding transaction was confirmed, but we did not successfully

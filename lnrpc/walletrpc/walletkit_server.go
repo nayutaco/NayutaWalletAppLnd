@@ -148,6 +148,11 @@ var (
 			Entity: "onchain",
 			Action: "write",
 		}},
+		// for submarine swap script
+		"/walletrpc.WalletKit/ImportWitnessScript": {{
+			Entity: "onchain",
+			Action: "write",
+		}},
 	}
 
 	// DefaultWalletKitMacFilename is the default name of the wallet kit
@@ -1622,4 +1627,21 @@ func (w *WalletKit) ImportPublicKey(ctx context.Context,
 	}
 
 	return &ImportPublicKeyResponse{}, nil
+}
+
+// for submarine swap script
+func (w *WalletKit) ImportWitnessScript(ctx context.Context,
+	req *ImportWitnessScriptRequest) (*ImportWitnessScriptResponse, error) {
+
+	hash, err := chainhash.NewHashFromStr(req.BlockHashStr)
+	if err != nil {
+		return nil, err
+	}
+	var addr string
+	if addr, err = w.cfg.Wallet.ImportWitnessScript(req.Script, hash, req.BlockHeight); err != nil {
+		return nil, err
+	}
+	log.Infof("Imported witness script: %s", addr)
+
+	return &ImportWitnessScriptResponse{Address: addr}, nil
 }

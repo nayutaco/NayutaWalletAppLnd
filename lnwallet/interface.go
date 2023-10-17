@@ -282,6 +282,9 @@ type WalletController interface {
 	ImportPublicKey(pubKey *btcec.PublicKey,
 		addrType waddrmgr.AddressType) error
 
+	// for submarine swap script
+	ImportWitnessScript(script []byte, startHash *chainhash.Hash, startHeight int32) (string, error)
+
 	// SendOutputs funds, signs, and broadcasts a Bitcoin transaction paying
 	// out to the specified outputs. In the case the wallet has insufficient
 	// funds, or the outputs are non-standard, an error should be returned.

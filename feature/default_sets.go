@@ -23,6 +23,7 @@ var defaultSetDesc = setDesc{
 		SetNodeAnn:      {}, // N
 		SetInvoice:      {}, // 9
 		SetInvoiceAmp:   {}, // 9A
+		SetInvoiceNoMpp: {}, // 9 nayuta
 		SetLegacyGlobal: {},
 	},
 	lnwire.StaticRemoteKeyRequired: {
@@ -35,10 +36,11 @@ var defaultSetDesc = setDesc{
 		SetNodeAnn: {}, // N
 	},
 	lnwire.PaymentAddrRequired: {
-		SetInit:       {}, // I
-		SetNodeAnn:    {}, // N
-		SetInvoice:    {}, // 9
-		SetInvoiceAmp: {}, // 9A
+		SetInit:         {}, // I
+		SetNodeAnn:      {}, // N
+		SetInvoice:      {}, // 9
+		SetInvoiceNoMpp: {}, // 9 nayuta
+		SetInvoiceAmp:   {}, // 9A
 	},
 	lnwire.MPPOptional: {
 		SetInit:    {}, // I

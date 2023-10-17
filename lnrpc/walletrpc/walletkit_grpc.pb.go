@@ -94,6 +94,8 @@ type WalletKitClient interface {
 	//they happen after the import. Rescans to detect past events will be
 	//supported later on.
 	ImportPublicKey(ctx context.Context, in *ImportPublicKeyRequest, opts ...grpc.CallOption) (*ImportPublicKeyResponse, error)
+	// for submarine swap script
+	ImportWitnessScript(ctx context.Context, in *ImportWitnessScriptRequest, opts ...grpc.CallOption) (*ImportWitnessScriptResponse, error)
 	//
 	//PublishTransaction attempts to publish the passed transaction to the
 	//network. Once this returns without an error, the wallet will continually
@@ -313,6 +315,15 @@ func (c *walletKitClient) ImportPublicKey(ctx context.Context, in *ImportPublicK
 	return out, nil
 }
 
+func (c *walletKitClient) ImportWitnessScript(ctx context.Context, in *ImportWitnessScriptRequest, opts ...grpc.CallOption) (*ImportWitnessScriptResponse, error) {
+	out := new(ImportWitnessScriptResponse)
+	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/ImportWitnessScript", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *walletKitClient) PublishTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*PublishResponse, error) {
 	out := new(PublishResponse)
 	err := c.cc.Invoke(ctx, "/walletrpc.WalletKit/PublishTransaction", in, out, opts...)
@@ -482,6 +493,8 @@ type WalletKitServer interface {
 	//they happen after the import. Rescans to detect past events will be
 	//supported later on.
 	ImportPublicKey(context.Context, *ImportPublicKeyRequest) (*ImportPublicKeyResponse, error)
+	// for submarine swap script
+	ImportWitnessScript(context.Context, *ImportWitnessScriptRequest) (*ImportWitnessScriptResponse, error)
 	//
 	//PublishTransaction attempts to publish the passed transaction to the
 	//network. Once this returns without an error, the wallet will continually
@@ -631,6 +644,9 @@ func (UnimplementedWalletKitServer) ImportAccount(context.Context, *ImportAccoun
 }
 func (UnimplementedWalletKitServer) ImportPublicKey(context.Context, *ImportPublicKeyRequest) (*ImportPublicKeyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ImportPublicKey not implemented")
+}
+func (UnimplementedWalletKitServer) ImportWitnessScript(context.Context, *ImportWitnessScriptRequest) (*ImportWitnessScriptResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ImportWitnessScript not implemented")
 }
 func (UnimplementedWalletKitServer) PublishTransaction(context.Context, *Transaction) (*PublishResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PublishTransaction not implemented")
@@ -873,6 +889,24 @@ func _WalletKit_ImportPublicKey_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WalletKit_ImportWitnessScript_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportWitnessScriptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WalletKitServer).ImportWitnessScript(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/walletrpc.WalletKit/ImportWitnessScript",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WalletKitServer).ImportWitnessScript(ctx, req.(*ImportWitnessScriptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _WalletKit_PublishTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Transaction)
 	if err := dec(in); err != nil {
@@ -1103,6 +1137,10 @@ var WalletKit_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ImportPublicKey",
 			Handler:    _WalletKit_ImportPublicKey_Handler,
+		},
+		{
+			MethodName: "ImportWitnessScript",
+			Handler:    _WalletKit_ImportWitnessScript_Handler,
 		},
 		{
 			MethodName: "PublishTransaction",

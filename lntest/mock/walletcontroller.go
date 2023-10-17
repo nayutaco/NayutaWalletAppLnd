@@ -125,6 +125,11 @@ func (w *WalletController) ImportPublicKey(*btcec.PublicKey,
 	return nil
 }
 
+// for submarine swap script
+func (w *WalletController) ImportWitnessScript([]byte, *chainhash.Hash, int32) (string, error) {
+	return "", nil
+}
+
 // SendOutputs currently returns dummy values.
 func (w *WalletController) SendOutputs([]*wire.TxOut,
 	chainfee.SatPerKWeight, int32, string) (*wire.MsgTx, error) {

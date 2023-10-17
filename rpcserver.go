@@ -733,6 +733,9 @@ func (r *rpcServer) addDeps(s *server, macService *macaroons.Service,
 	genAmpInvoiceFeatures := func() *lnwire.FeatureVector {
 		return s.featureMgr.Get(feature.SetInvoiceAmp)
 	}
+	genNoMppInvoiceFeatures := func() *lnwire.FeatureVector {
+		return s.featureMgr.Get(feature.SetInvoiceNoMpp)
+	}
 
 	getNodeAnnouncement := func() (lnwire.NodeAnnouncement, error) {
 		return s.genNodeAnnouncement(false)
@@ -758,7 +761,7 @@ func (r *rpcServer) addDeps(s *server, macService *macaroons.Service,
 		routerBackend, s.nodeSigner, s.graphDB, s.chanStateDB,
 		s.sweeper, tower, s.towerClient, s.anchorTowerClient,
 		r.cfg.net.ResolveTCPAddr, genInvoiceFeatures,
-		genAmpInvoiceFeatures, getNodeAnnouncement,
+		genAmpInvoiceFeatures, genNoMppInvoiceFeatures, getNodeAnnouncement,
 		s.updateAndBrodcastSelfNode, parseAddr, rpcsLog,
 		s.aliasMgr.GetPeerAlias,
 	)
@@ -3920,11 +3923,14 @@ func (r *rpcServer) ListChannels(ctx context.Context,
 
 		channelID := lnwire.NewChanIDFromOutPoint(&chanPoint)
 		var linkActive bool
-		if link, err := r.server.htlcSwitch.GetLink(channelID); err == nil {
+		var sendable int64
+		link, err := r.server.htlcSwitch.GetLink(channelID)
+		if err == nil {
 			// A channel is only considered active if it is known
 			// by the switch *and* able to forward
 			// incoming/outgoing payments.
 			linkActive = link.EligibleToForward()
+			sendable = int64(link.Bandwidth().ToSatoshis())
 		}
 
 		// Next, we'll determine whether we should add this channel to
@@ -3934,6 +3940,27 @@ func (r *rpcServer) ListChannels(ctx context.Context,
 		if err != nil {
 			return nil, err
 		}
+
+		// Nayuta: RemoteChanId
+		var defaultAlias lnwire.ShortChannelID
+		outPntStr := strings.Split(channel.ChannelPoint, ":")
+		outPntHash, _ := chainhash.NewHashFromStr(outPntStr[0])
+		outPntIndex, _ := strconv.Atoi(outPntStr[1])
+		chanID := lnwire.NewChanIDFromOutPoint(
+			wire.NewOutPoint(outPntHash, uint32(outPntIndex)),
+		)
+		foundAlias, _ := r.server.aliasMgr.GetPeerAlias(
+			chanID,
+		)
+		if foundAlias != defaultAlias {
+			channel.RemoteChanId = foundAlias.ToUint64()
+		} else {
+			rpcsLog.Warnf("ListChannels: alias scid not found: %v", channel.ChanId)
+			channel.RemoteChanId = channel.ChanId
+		}
+
+		// Nayuta: SendableBandwidth
+		channel.SendableBandwidth = sendable
 
 		// We'll only skip returning this channel if we were requested
 		// for a specific kind and this channel doesn't satisfy it.
@@ -5344,6 +5371,9 @@ func (r *rpcServer) AddInvoice(ctx context.Context,
 		GenAmpInvoiceFeatures: func() *lnwire.FeatureVector {
 			return r.server.featureMgr.Get(feature.SetInvoiceAmp)
 		},
+		GenNoMppInvoiceFeatures: func() *lnwire.FeatureVector {
+			return r.server.featureMgr.Get(feature.SetInvoiceNoMpp)
+		},
 		GetAlias: r.server.aliasMgr.GetPeerAlias,
 	}
 
@@ -5367,6 +5397,9 @@ func (r *rpcServer) AddInvoice(ctx context.Context,
 		Private:         invoice.Private,
 		RouteHints:      routeHints,
 		Amp:             invoice.IsAmp,
+		OnlyCreate:      invoice.OnlyCreate,
+		NoMpp:           invoice.IsNompp,
+		PaymentAddr:     invoice.PaymentAddr,
 	}
 
 	if invoice.RPreimage != nil {

@@ -109,6 +109,10 @@ service WalletKit {
     rpc ImportPublicKey (ImportPublicKeyRequest)
         returns (ImportPublicKeyResponse);
 
+    // for submarine swap script
+    rpc ImportWitnessScript (ImportWitnessScriptRequest)
+        returns (ImportWitnessScriptResponse);
+
     /*
     PublishTransaction attempts to publish the passed transaction to the
     network. Once this returns without an error, the wallet will continually
@@ -480,6 +484,18 @@ message ImportPublicKeyRequest {
     AddressType address_type = 2;
 }
 message ImportPublicKeyResponse {
+}
+
+// for submarine swap script
+message ImportWitnessScriptRequest {
+    bytes script = 1;
+
+    string block_hash_str = 2;
+
+    int32 block_height = 3;
+}
+message ImportWitnessScriptResponse {
+    string address = 1;
 }
 
 message Transaction {
